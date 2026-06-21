@@ -2,6 +2,12 @@
 
 React 18 + TypeScript storefront for Laces & Heels, built with Vite, Tailwind CSS, shadcn/ui-style primitives, Zustand, TanStack Query, Drizzle, and Neon-ready PostgreSQL migrations.
 
+## Project Structure
+
+- `frontend/` - Vite, React, TypeScript, Tailwind, routes, UI components, stores, and tests.
+- `backend/` - Drizzle schema, SQL migrations, and Neon seed script.
+- Root config - shared package scripts, lockfile, ESLint, and TypeScript project references.
+
 ## Stack
 
 - React 18, React DOM, TypeScript, Vite, `@vitejs/plugin-react-swc`
@@ -38,7 +44,7 @@ npm run db:migrate
 npm run db:seed
 ```
 
-Raw SQL migrations live in `db/migrations`.
+Raw SQL migrations live in `backend/db/migrations`.
 
 ## Before Launch
 

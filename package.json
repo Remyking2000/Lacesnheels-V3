@@ -9,7 +9,7 @@
     "dev:all": "concurrently \"npm run dev\" \"npm run dev:server\"",
     "build": "tsc -b && vite build --config frontend/vite.config.ts",
     "preview": "vite preview --config frontend/vite.config.ts",
-    "start": "node --loader ts-node/esm backend/server.ts",
+    "start": "npx tsx backend/server.ts",
     "lint": "eslint .",
     "test": "vitest --config frontend/vitest.config.ts",
     "db:generate": "drizzle-kit generate --config backend/drizzle.config.ts",

@@ -15,7 +15,7 @@ export const CategoryController = {
   // GET /api/categories/:id
   async getById(req: Request, res: Response) {
     try {
-      const category = await CategoryModel.getById(req.params.id);
+      const category = await CategoryModel.getById(req.params.id as string);
       if (!category) return res.status(404).json({ success: false, message: "Category not found" });
       res.json({ success: true, data: category });
     } catch (err) {
@@ -44,7 +44,7 @@ export const CategoryController = {
       if (!name?.trim()) {
         return res.status(400).json({ success: false, message: "Category name is required" });
       }
-      const category = await CategoryModel.update(req.params.id, name.trim());
+      const category = await CategoryModel.update(req.params.id as string, name.trim());
       if (!category) return res.status(404).json({ success: false, message: "Category not found" });
       res.json({ success: true, data: category });
     } catch (err) {
@@ -55,7 +55,7 @@ export const CategoryController = {
   // DELETE /api/categories/:id
   async remove(req: Request, res: Response) {
     try {
-      const deleted = await CategoryModel.delete(req.params.id);
+      const deleted = await CategoryModel.delete(req.params.id as string);
       if (!deleted) return res.status(404).json({ success: false, message: "Category not found" });
       res.json({ success: true, message: "Category deleted" });
     } catch (err) {

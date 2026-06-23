@@ -133,7 +133,7 @@ export function useStorefrontProduct(slug: string | undefined) {
     staleTime: 1000 * 60 * 5,
     placeholderData: () => {
       const p = staticProducts.find((s) => s.slug === slug);
-      return p ? staticToStorefront(p) : null;
+      return p ? staticToStorefront(p) : undefined;
     },
   });
 }

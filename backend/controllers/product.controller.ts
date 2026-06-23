@@ -39,7 +39,7 @@ export const ProductController = {
   // GET /api/products/:id
   async getById(req: Request, res: Response) {
     try {
-      const product = await ProductModel.getById(req.params.id);
+      const product = await ProductModel.getById(req.params.id as string);
       if (!product) return res.status(404).json({ success: false, message: "Product not found" });
       res.json({ success: true, data: product });
     } catch (err) {
@@ -50,7 +50,7 @@ export const ProductController = {
   // GET /api/products/slug/:slug
   async getBySlug(req: Request, res: Response) {
     try {
-      const product = await ProductModel.getBySlug(req.params.slug);
+      const product = await ProductModel.getBySlug(req.params.slug as string);
       if (!product) return res.status(404).json({ success: false, message: "Product not found" });
       res.json({ success: true, data: product });
     } catch (err) {
@@ -61,7 +61,7 @@ export const ProductController = {
   // GET /api/products/category/:categoryId
   async getByCategory(req: Request, res: Response) {
     try {
-      const products = await ProductModel.getByCategory(req.params.categoryId);
+      const products = await ProductModel.getByCategory(req.params.categoryId as string);
       res.json({ success: true, data: products });
     } catch (err) {
       res.status(500).json({ success: false, message: (err as Error).message });
@@ -100,7 +100,7 @@ export const ProductController = {
   // PUT /api/products/:id
   async update(req: Request, res: Response) {
     try {
-      const product = await ProductModel.update(req.params.id, req.body);
+      const product = await ProductModel.update(req.params.id as string, req.body);
       if (!product) return res.status(404).json({ success: false, message: "Product not found" });
       res.json({ success: true, data: product });
     } catch (err) {
@@ -111,7 +111,7 @@ export const ProductController = {
   // DELETE /api/products/:id
   async remove(req: Request, res: Response) {
     try {
-      const deleted = await ProductModel.delete(req.params.id);
+      const deleted = await ProductModel.delete(req.params.id as string);
       if (!deleted) return res.status(404).json({ success: false, message: "Product not found" });
       res.json({ success: true, message: "Product deleted" });
     } catch (err) {

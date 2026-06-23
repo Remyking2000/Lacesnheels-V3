@@ -33,7 +33,7 @@ export const OrderController = {
   // GET /api/orders/:id
   async getById(req: Request, res: Response) {
     try {
-      const order = await OrderModel.getById(req.params.id);
+      const order = await OrderModel.getById(req.params.id as string);
       if (!order) return res.status(404).json({ success: false, message: "Order not found" });
       res.json({ success: true, data: order });
     } catch (err) {
@@ -68,7 +68,7 @@ export const OrderController = {
           message: `Invalid status. Must be one of: ${VALID_STATUSES.join(", ")}`,
         });
       }
-      const order = await OrderModel.updateStatus(req.params.id, status);
+      const order = await OrderModel.updateStatus(req.params.id as string, status);
       if (!order) return res.status(404).json({ success: false, message: "Order not found" });
       res.json({ success: true, data: order });
     } catch (err) {
@@ -79,7 +79,7 @@ export const OrderController = {
   // DELETE /api/orders/:id
   async remove(req: Request, res: Response) {
     try {
-      const deleted = await OrderModel.delete(req.params.id);
+      const deleted = await OrderModel.delete(req.params.id as string);
       if (!deleted) return res.status(404).json({ success: false, message: "Order not found" });
       res.json({ success: true, message: "Order deleted" });
     } catch (err) {

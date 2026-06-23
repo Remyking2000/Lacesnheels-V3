@@ -13,20 +13,22 @@ export function AdminPage() {
     <main className="section">
       <div className="section-inner">
         <p className="eyebrow">Admin snapshot</p>
-        <h1 className="font-display text-5xl leading-none md:text-7xl">Catalog overview</h1>
-        <div className="mt-8 grid gap-5 md:grid-cols-3">
+        <h1 className="font-display text-4xl leading-tight sm:text-5xl md:text-7xl">
+          Catalog overview
+        </h1>
+        <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-3">
           <Metric label="Products" value={products.length} />
           <Metric label="Categories listed" value={categoryRows.length} />
           <Metric label="Primary channel" value="WhatsApp" />
         </div>
-        <section className="mt-8 rounded-lg border border-[#6f5545]/20 bg-white p-5 shadow-soft">
-          <h2 className="font-display text-3xl">Products by category</h2>
-          <div className="mt-5 h-80">
+        <section className="mt-8 rounded-lg border border-[#6f5545]/20 bg-white p-4 shadow-soft sm:p-5">
+          <h2 className="font-display text-2xl sm:text-3xl">Products by category</h2>
+          <div className="mt-5 h-64 sm:h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={categoryRows}>
+              <BarChart data={categoryRows} margin={{ left: -16 }}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="category" />
-                <YAxis allowDecimals={false} />
+                <XAxis dataKey="category" tick={{ fontSize: 11 }} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
                 <Tooltip />
                 <Bar dataKey="count" fill="#c79a42" radius={[6, 6, 0, 0]} />
               </BarChart>

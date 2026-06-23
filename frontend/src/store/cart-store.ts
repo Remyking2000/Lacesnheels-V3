@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 type CartState = {
   items: string[];
@@ -7,9 +8,18 @@ type CartState = {
   clear: () => void;
 };
 
-export const useCartStore = create<CartState>((set) => ({
-  items: [],
-  addItem: (slug) => set((state) => ({ items: state.items.includes(slug) ? state.items : [...state.items, slug] })),
-  removeItem: (slug) => set((state) => ({ items: state.items.filter((item) => item !== slug) })),
-  clear: () => set({ items: [] }),
-}));
+export const useCartStore = create<CartState>()(
+  persist(
+    (set) => ({
+      items: [],
+      addItem: (slug) =>
+        set((state) => ({
+          items: state.items.includes(slug) ? state.items : [...state.items, slug],
+        })),
+      removeItem: (slug) =>
+        set((state) => ({ items: state.items.filter((item) => item !== slug) })),
+      clear: () => set({ items: [] }),
+    }),
+    { name: "lnh-cart" },
+  ),
+);

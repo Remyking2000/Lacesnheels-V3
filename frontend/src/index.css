@@ -15,6 +15,8 @@
 
   html {
     scroll-behavior: smooth;
+    /* Prevent horizontal overflow at root */
+    overflow-x: hidden;
   }
 
   body {
@@ -22,6 +24,14 @@
     min-width: 320px;
     min-height: 100vh;
     background: #fbf5ea;
+    /* Prevent horizontal overflow */
+    overflow-x: hidden;
+  }
+
+  /* Contain overflow on the React root mount point */
+  #root {
+    overflow-x: hidden;
+    max-width: 100vw;
   }
 
   h1,
@@ -29,17 +39,29 @@
   h3 {
     font-family: Georgia, "Times New Roman", serif;
     letter-spacing: 0;
+    /* Prevent long words from breaking layouts */
+    overflow-wrap: break-word;
+    word-break: break-word;
   }
 
   img {
     display: block;
     max-width: 100%;
+    height: auto;
+  }
+
+  /* Improve tap target size for all interactive elements */
+  button,
+  a,
+  [role="button"] {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
   }
 }
 
 @layer components {
   .section {
-    @apply px-[5vw] py-16 md:py-20;
+    @apply px-4 py-12 sm:px-[5vw] md:py-20;
   }
 
   .section-inner {
@@ -50,7 +72,33 @@
     @apply mb-3 text-xs font-black uppercase tracking-[0.14em] text-[#9f7131];
   }
 
+  /* Fluid lead text — scales from mobile to desktop */
   .lead {
-    @apply max-w-2xl text-lg leading-8 text-[#6f5545] md:text-xl;
+    @apply max-w-2xl text-base leading-7 text-[#6f5545] sm:text-lg sm:leading-8 md:text-xl;
+  }
+
+  /* ── Admin panel utilities ── */
+  .input {
+    @apply w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-gold focus:ring-2 focus:ring-gold/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500;
+  }
+
+  .label {
+    @apply mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-300;
+  }
+
+  .err {
+    @apply mt-1 text-xs text-red-500;
+  }
+
+  .btn-primary {
+    @apply rounded-lg bg-charcoal px-4 py-2 text-sm font-bold text-ivory transition hover:bg-espresso dark:bg-gold dark:text-charcoal dark:hover:bg-amber-500;
+  }
+
+  .btn-secondary {
+    @apply rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700;
+  }
+
+  .btn-xs {
+    @apply rounded-md bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700 transition hover:bg-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:hover:bg-amber-900/40;
   }
 }

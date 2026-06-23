@@ -1,12 +1,21 @@
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ProductForm } from "../components/ProductForm";
-import { useAdminStore } from "../store/admin-store";
+import { useAdminProducts } from "../../hooks/useProducts";
 
 export function EditProductPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const product = useAdminStore((s) => s.products.find((p) => p.id === id));
+  const { data: products = [], isLoading } = useAdminProducts();
+  const product = products.find((p) => p.id === id);
+
+  if (isLoading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-gold" />
+      </div>
+    );
+  }
 
   if (!product) {
     return (

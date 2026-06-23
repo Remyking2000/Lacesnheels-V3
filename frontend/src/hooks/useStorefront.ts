@@ -115,7 +115,7 @@ export function useStorefrontCategories() {
     queryKey: ["storefront-categories"],
     queryFn: async (): Promise<StorefrontCategory[]> => {
       const rows = await sql`SELECT * FROM categories ORDER BY name ASC`;
-      return (rows as DbCategory[]).map(mapDbCategory);
+      return (rows as unknown as DbCategory[]).map(mapDbCategory);
     },
     staleTime: 1000 * 60 * 5,
     placeholderData: staticCategories.map((c) => ({
@@ -141,11 +141,11 @@ export function useStorefrontProducts() {
       `;
       const catMap: Record<string, DbCategory> = {};
       const catRows = await sql`SELECT * FROM categories`;
-      (catRows as DbCategory[]).forEach((c) => {
+      (catRows as unknown as DbCategory[]).forEach((c) => {
         catMap[c.id] = c;
         catMap[c.slug] = c;
       });
-      return (rows as DbProduct[]).map((r) => mapDbProduct(r, catMap));
+      return (rows as unknown as DbProduct[]).map((r) => mapDbProduct(r, catMap));
     },
     staleTime: 1000 * 60 * 5,
     // Fallback to static while loading
@@ -172,7 +172,7 @@ export function useStorefrontProduct(slug: string | undefined) {
         LIMIT 1
       `;
       if (!rows[0]) return null;
-      const row = rows[0] as DbProduct & { cat_name: string; cat_slug: string };
+      const row = rows[0] as unknown as DbProduct & { cat_name: string; cat_slug: string };
       const catMap: Record<string, DbCategory> = {};
       return mapDbProduct(row, catMap);
     },
@@ -185,3 +185,4 @@ export function useStorefrontProduct(slug: string | undefined) {
     },
   });
 }
+

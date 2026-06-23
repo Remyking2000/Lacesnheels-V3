@@ -15,7 +15,7 @@ export function useCategories() {
         FROM categories
         ORDER BY name ASC
       `;
-      return rows as DbCategory[];
+      return rows as unknown as DbCategory[];
     },
     staleTime: 1000 * 60 * 5, // 5 min
   });
@@ -34,7 +34,7 @@ export function useAddCategory() {
         ON CONFLICT (slug) DO UPDATE SET name = excluded.name
         RETURNING *
       `;
-      return rows[0] as DbCategory;
+      return rows[0] as unknown as DbCategory;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: CATEGORIES_KEY }),
   });
@@ -63,3 +63,4 @@ export function useDeleteCategory() {
     onSuccess: () => qc.invalidateQueries({ queryKey: CATEGORIES_KEY }),
   });
 }
+

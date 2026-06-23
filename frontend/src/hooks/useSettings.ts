@@ -30,7 +30,7 @@ export function useSettings() {
     queryKey: SETTINGS_KEY,
     queryFn: async () => {
       const rows = await sql`SELECT key, value FROM store_settings`;
-      return rowsToSettings(rows as DbSetting[]);
+      return rowsToSettings(rows as unknown as DbSetting[]);
     },
     staleTime: 1000 * 60 * 10,
     placeholderData: DEFAULT_SETTINGS,
@@ -53,3 +53,4 @@ export function useSaveSettings() {
     onSuccess: () => qc.invalidateQueries({ queryKey: SETTINGS_KEY }),
   });
 }
+

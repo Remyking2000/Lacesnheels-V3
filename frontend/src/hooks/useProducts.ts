@@ -46,7 +46,7 @@ export function useProducts() {
         WHERE is_active = true
         ORDER BY sort_order ASC, created_at DESC
       `;
-      return (rows as DbProduct[]).map(dbProductToAdmin);
+      return (rows as unknown as DbProduct[]).map(dbProductToAdmin);
     },
     staleTime: 1000 * 60 * 5,
   });
@@ -62,7 +62,7 @@ export function useAdminProducts() {
         SELECT * FROM products
         ORDER BY created_at DESC
       `;
-      return (rows as DbProduct[]).map(dbProductToAdmin);
+      return (rows as unknown as DbProduct[]).map(dbProductToAdmin);
     },
     staleTime: 1000 * 60,
   });
@@ -77,7 +77,7 @@ export function useProduct(slug: string | undefined) {
     queryFn: async () => {
       const rows = await sql`SELECT * FROM products WHERE slug = ${slug} AND is_active = true`;
       if (!rows[0]) return null;
-      return dbProductToAdmin(rows[0] as DbProduct);
+      return dbProductToAdmin(rows[0] as unknown as DbProduct);
     },
     staleTime: 1000 * 60 * 5,
   });
@@ -163,3 +163,4 @@ export function useDeleteProduct() {
     },
   });
 }
+

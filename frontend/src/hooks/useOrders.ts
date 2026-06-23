@@ -25,7 +25,7 @@ export function useOrders() {
       const rows = await sql`
         SELECT * FROM orders ORDER BY created_at DESC
       `;
-      return (rows as DbOrder[]).map(dbOrderToAdmin);
+      return (rows as unknown as DbOrder[]).map(dbOrderToAdmin);
     },
     staleTime: 1000 * 30,
   });
@@ -77,3 +77,4 @@ export function useUpdateOrderStatus() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ORDERS_KEY }),
   });
 }
+

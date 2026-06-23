@@ -1,26 +1,25 @@
 /**
- * Storefront-facing hooks — map DB rows to the shape the storefront components expect.
- * Falls back to static catalog data if the DB is unavailable.
+ * Storefront-facing hooks — fetch from the Express API and map to
+ * the StorefrontProduct shape the storefront components expect.
+ * Falls back to static catalog data if the API is unreachable.
  */
 import { useQuery } from "@tanstack/react-query";
-import { sql } from "../lib/neon";
+import { api } from "../lib/api";
 import type { DbProduct, DbCategory } from "../lib/neon";
 import {
   categories as staticCategories,
   products as staticProducts,
 } from "../data/catalog";
 
-// ── Storefront product shape (superset of old Product type) ───────────────────
+// ── Storefront shape ──────────────────────────────────────────────────────────
 
 export interface StorefrontProduct {
   slug: string;
   name: string;
-  /** Category name (resolved) */
   categoryName: string;
-  /** Category id or slug — for filtering */
   categoryKey: string;
-  price: string;           // "From KES 12,500"
-  priceNum: number;        // 12500 — for cart totals
+  price: string;
+  priceNum: number;
   label: string;
   image: string;
   colors: string;
@@ -41,22 +40,18 @@ export interface StorefrontCategory {
   image: string;
 }
 
-// ── Map DB rows → storefront shapes ──────────────────────────────────────────
+// ── Mappers ───────────────────────────────────────────────────────────────────
 
-function mapDbProduct(
-  row: DbProduct,
-  categoryMap: Record<string, DbCategory>,
-): StorefrontProduct {
-  const cat = categoryMap[row.category_id] ?? categoryMap[row.category_slug];
-  const priceNum = parseFloat(row.price) || 0;
+function mapDbProduct(row: DbProduct & { category_name?: string }): StorefrontProduct {
   let images: string[] = [];
   try { images = JSON.parse(row.images); } catch { /* ignore */ }
   const image = images[0] || row.image_url;
+  const priceNum = parseFloat(row.price) || 0;
 
   return {
     slug: row.slug,
     name: row.name,
-    categoryName: cat?.name ?? row.category_slug,
+    categoryName: (row as { category_name?: string }).category_name ?? row.category_slug,
     categoryKey: row.category_slug || row.category_id,
     price: row.price_label || (priceNum > 0 ? `From KES ${priceNum.toLocaleString()}` : ""),
     priceNum,
@@ -74,33 +69,22 @@ function mapDbProduct(
 }
 
 function mapDbCategory(row: DbCategory): StorefrontCategory {
-  return {
-    id: row.id,
-    slug: row.slug,
-    name: row.name,
-    intro: row.intro,
-    image: row.image_url,
-  };
+  return { id: row.id, slug: row.slug, name: row.name, intro: row.intro, image: row.image_url };
 }
 
-function staticToStorefrontProduct(
-  p: (typeof staticProducts)[0],
-  catMap: Record<string, string>,
-): StorefrontProduct {
+// Static fallbacks
+const staticCatMap = Object.fromEntries(staticCategories.map((c) => [c.slug, c.name]));
+
+function staticToStorefront(p: (typeof staticProducts)[0]): StorefrontProduct {
   const priceNum = parseFloat(p.price.replace(/[^0-9.]/g, "")) || 0;
   return {
-    slug: p.slug,
-    name: p.name,
-    categoryName: catMap[p.category] ?? p.category,
+    slug: p.slug, name: p.name,
+    categoryName: staticCatMap[p.category] ?? p.category,
     categoryKey: p.category,
-    price: p.price,
-    priceNum,
-    label: p.label,
-    image: p.image,
-    colors: p.colors,
-    details: p.details,
-    condition: p.condition,
-    availability: p.availability,
+    price: p.price, priceNum,
+    label: p.label, image: p.image,
+    colors: p.colors, details: p.details,
+    condition: p.condition, availability: p.availability,
     description: p.description,
     isFeatured: false,
     isNewArrival: p.category === "new-arrivals",
@@ -113,49 +97,26 @@ function staticToStorefrontProduct(
 export function useStorefrontCategories() {
   return useQuery({
     queryKey: ["storefront-categories"],
-    queryFn: async (): Promise<StorefrontCategory[]> => {
-      const rows = await sql`SELECT * FROM categories ORDER BY name ASC`;
-      return (rows as unknown as DbCategory[]).map(mapDbCategory);
+    queryFn: async () => {
+      const rows = await api.get<DbCategory[]>("/api/categories");
+      return rows.map(mapDbCategory);
     },
     staleTime: 1000 * 60 * 5,
     placeholderData: staticCategories.map((c) => ({
-      id: c.slug,
-      slug: c.slug,
-      name: c.name,
-      intro: c.intro,
-      image: c.image,
+      id: c.slug, slug: c.slug, name: c.name, intro: c.intro, image: c.image,
     })),
   });
 }
 
 export function useStorefrontProducts() {
-  const { data: cats = [] } = useStorefrontCategories();
-
   return useQuery({
     queryKey: ["storefront-products"],
-    queryFn: async (): Promise<StorefrontProduct[]> => {
-      const rows = await sql`
-        SELECT * FROM products
-        WHERE is_active = true
-        ORDER BY sort_order ASC, created_at DESC
-      `;
-      const catMap: Record<string, DbCategory> = {};
-      const catRows = await sql`SELECT * FROM categories`;
-      (catRows as unknown as DbCategory[]).forEach((c) => {
-        catMap[c.id] = c;
-        catMap[c.slug] = c;
-      });
-      return (rows as unknown as DbProduct[]).map((r) => mapDbProduct(r, catMap));
+    queryFn: async () => {
+      const rows = await api.get<(DbProduct & { category_name?: string })[]>("/api/products");
+      return rows.map(mapDbProduct);
     },
     staleTime: 1000 * 60 * 5,
-    // Fallback to static while loading
-    placeholderData: () => {
-      const catMap = Object.fromEntries(
-        staticCategories.map((c) => [c.slug, c.name]),
-      );
-      return staticProducts.map((p) => staticToStorefrontProduct(p, catMap));
-    },
-    enabled: cats.length >= 0, // always enabled
+    placeholderData: staticProducts.map(staticToStorefront),
   });
 }
 
@@ -163,26 +124,16 @@ export function useStorefrontProduct(slug: string | undefined) {
   return useQuery({
     queryKey: ["storefront-product", slug],
     enabled: !!slug,
-    queryFn: async (): Promise<StorefrontProduct | null> => {
-      const rows = await sql`
-        SELECT p.*, c.name as cat_name, c.slug as cat_slug
-        FROM products p
-        LEFT JOIN categories c ON c.id = p.category_id OR c.slug = p.category_slug
-        WHERE p.slug = ${slug} AND p.is_active = true
-        LIMIT 1
-      `;
-      if (!rows[0]) return null;
-      const row = rows[0] as unknown as DbProduct & { cat_name: string; cat_slug: string };
-      const catMap: Record<string, DbCategory> = {};
-      return mapDbProduct(row, catMap);
+    queryFn: async () => {
+      const row = await api.get<DbProduct & { category_name?: string }>(
+        `/api/products/slug/${slug}`,
+      );
+      return mapDbProduct(row);
     },
     staleTime: 1000 * 60 * 5,
     placeholderData: () => {
       const p = staticProducts.find((s) => s.slug === slug);
-      if (!p) return null;
-      const catMap = Object.fromEntries(staticCategories.map((c) => [c.slug, c.name]));
-      return staticToStorefrontProduct(p, catMap);
+      return p ? staticToStorefront(p) : null;
     },
   });
 }
-

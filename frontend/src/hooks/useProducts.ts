@@ -1,21 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { sql } from "../lib/neon";
+import { api } from "../lib/api";
 import type { DbProduct } from "../lib/neon";
 import type { AdminProduct } from "../admin/types";
 
 export const PRODUCTS_KEY = ["products"] as const;
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function parseImages(raw: string): string[] {
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return raw ? [raw] : [];
-  }
-}
+// ── Map DB row → AdminProduct ─────────────────────────────────────────────────
 
 export function dbProductToAdmin(row: DbProduct): AdminProduct {
+  let images: string[] = [];
+  try { images = JSON.parse(row.images); } catch { /* ignore */ }
+  if (images.length === 0 && row.image_url) images = [row.image_url];
+
   return {
     id: row.id,
     name: row.name,
@@ -24,7 +20,7 @@ export function dbProductToAdmin(row: DbProduct): AdminProduct {
     category: row.category_id || row.category_slug,
     price: parseFloat(row.price) || 0,
     comparePrice: row.compare_price ? parseFloat(row.compare_price) : undefined,
-    images: parseImages(row.images).length > 0 ? parseImages(row.images) : [row.image_url],
+    images,
     stockQuantity: row.stock_quantity,
     sku: row.sku,
     isNewArrival: row.is_new_arrival,
@@ -35,132 +31,90 @@ export function dbProductToAdmin(row: DbProduct): AdminProduct {
   };
 }
 
-// ── Fetch all ─────────────────────────────────────────────────────────────────
+// ── Hooks ─────────────────────────────────────────────────────────────────────
 
 export function useProducts() {
   return useQuery({
     queryKey: PRODUCTS_KEY,
     queryFn: async () => {
-      const rows = await sql`
-        SELECT * FROM products
-        WHERE is_active = true
-        ORDER BY sort_order ASC, created_at DESC
-      `;
-      return (rows as unknown as DbProduct[]).map(dbProductToAdmin);
+      const rows = await api.get<DbProduct[]>("/api/products");
+      return rows.map(dbProductToAdmin);
     },
     staleTime: 1000 * 60 * 5,
   });
 }
 
-// ── Fetch all (admin — includes inactive) ────────────────────────────────────
-
 export function useAdminProducts() {
   return useQuery({
     queryKey: [...PRODUCTS_KEY, "admin"],
     queryFn: async () => {
-      const rows = await sql`
-        SELECT * FROM products
-        ORDER BY created_at DESC
-      `;
-      return (rows as unknown as DbProduct[]).map(dbProductToAdmin);
+      const rows = await api.get<DbProduct[]>("/api/products?admin=true");
+      return rows.map(dbProductToAdmin);
     },
     staleTime: 1000 * 60,
   });
 }
-
-// ── Fetch single by slug ──────────────────────────────────────────────────────
 
 export function useProduct(slug: string | undefined) {
   return useQuery({
     queryKey: [...PRODUCTS_KEY, slug],
     enabled: !!slug,
     queryFn: async () => {
-      const rows = await sql`SELECT * FROM products WHERE slug = ${slug} AND is_active = true`;
-      if (!rows[0]) return null;
-      return dbProductToAdmin(rows[0] as unknown as DbProduct);
+      const row = await api.get<DbProduct>(`/api/products/slug/${slug}`);
+      return dbProductToAdmin(row);
     },
     staleTime: 1000 * 60 * 5,
   });
 }
 
-// ── Add ───────────────────────────────────────────────────────────────────────
-
 export function useAddProduct() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (p: AdminProduct) => {
-      await sql`
-        INSERT INTO products (
-          id, slug, name, description, category_id, category_slug,
-          price_label, badge_label, image_url, colors, details,
-          condition, availability, price, compare_price, images,
-          stock_quantity, sku, is_new_arrival, is_featured, is_active,
-          featured, sort_order
-        ) VALUES (
-          ${p.id}, ${p.slug}, ${p.name}, ${p.description},
-          ${p.category}, ${p.category},
-          ${"KES " + p.price.toLocaleString()}, ${""},
-          ${p.images[0] ?? ""}, ${""}, ${""},
-          ${"New"}, ${""},
-          ${p.price}, ${p.comparePrice ?? null},
-          ${JSON.stringify(p.images)},
-          ${p.stockQuantity}, ${p.sku},
-          ${p.isNewArrival}, ${p.isFeatured}, ${p.isActive},
-          ${p.isFeatured}, 0
-        )
-        ON CONFLICT (slug) DO NOTHING
-      `;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: PRODUCTS_KEY });
-    },
+    mutationFn: (p: AdminProduct) =>
+      api.post<DbProduct>("/api/products", {
+        slug:          p.slug,
+        name:          p.name,
+        description:   p.description,
+        categoryId:    p.category,
+        price:         p.price,
+        comparePrice:  p.comparePrice,
+        images:        p.images,
+        stockQuantity: p.stockQuantity,
+        sku:           p.sku,
+        isNewArrival:  p.isNewArrival,
+        isFeatured:    p.isFeatured,
+        isActive:      p.isActive,
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: PRODUCTS_KEY }),
   });
 }
-
-// ── Update ────────────────────────────────────────────────────────────────────
 
 export function useUpdateProduct() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, updates }: { id: string; updates: Partial<AdminProduct> }) => {
-      await sql`
-        UPDATE products SET
-          name            = COALESCE(${updates.name ?? null}, name),
-          slug            = COALESCE(${updates.slug ?? null}, slug),
-          description     = COALESCE(${updates.description ?? null}, description),
-          category_id     = COALESCE(${updates.category ?? null}, category_id),
-          category_slug   = COALESCE(${updates.category ?? null}, category_slug),
-          price           = COALESCE(${updates.price ?? null}, price),
-          compare_price   = COALESCE(${updates.comparePrice ?? null}, compare_price),
-          images          = COALESCE(${updates.images ? JSON.stringify(updates.images) : null}, images),
-          image_url       = COALESCE(${updates.images?.[0] ?? null}, image_url),
-          stock_quantity  = COALESCE(${updates.stockQuantity ?? null}, stock_quantity),
-          sku             = COALESCE(${updates.sku ?? null}, sku),
-          is_new_arrival  = COALESCE(${updates.isNewArrival ?? null}, is_new_arrival),
-          is_featured     = COALESCE(${updates.isFeatured ?? null}, is_featured),
-          is_active       = COALESCE(${updates.isActive ?? null}, is_active),
-          featured        = COALESCE(${updates.isFeatured ?? null}, featured),
-          updated_at      = now()
-        WHERE id = ${id}
-      `;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: PRODUCTS_KEY });
-    },
+    mutationFn: ({ id, updates }: { id: string; updates: Partial<AdminProduct> }) =>
+      api.put<DbProduct>(`/api/products/${id}`, {
+        name:          updates.name,
+        slug:          updates.slug,
+        description:   updates.description,
+        categoryId:    updates.category,
+        price:         updates.price,
+        comparePrice:  updates.comparePrice,
+        images:        updates.images,
+        stockQuantity: updates.stockQuantity,
+        sku:           updates.sku,
+        isNewArrival:  updates.isNewArrival,
+        isFeatured:    updates.isFeatured,
+        isActive:      updates.isActive,
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: PRODUCTS_KEY }),
   });
 }
-
-// ── Delete ────────────────────────────────────────────────────────────────────
 
 export function useDeleteProduct() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => {
-      await sql`DELETE FROM products WHERE id = ${id}`;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: PRODUCTS_KEY });
-    },
+    mutationFn: (id: string) => api.delete(`/api/products/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: PRODUCTS_KEY }),
   });
 }
-

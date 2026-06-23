@@ -1,13 +1,25 @@
-import { MessageCircle } from "lucide-react";
+import { Loader2, MessageCircle } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { ProductCard } from "../components/catalog/ProductCard";
 import { Button } from "../components/ui/button";
-import { categoryName, productBySlug, products } from "../data/catalog";
+import {
+  useStorefrontProduct,
+  useStorefrontProducts,
+} from "../hooks/useStorefront";
 import { whatsappLink } from "../lib/whatsapp";
 
 export function ProductPage() {
-  const { slug } = useParams();
-  const product = productBySlug(slug);
+  const { slug } = useParams<{ slug: string }>();
+  const { data: product, isLoading } = useStorefrontProduct(slug);
+  const { data: allProducts = [] } = useStorefrontProducts();
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-gold" />
+      </div>
+    );
+  }
 
   if (!product) {
     return (
@@ -25,8 +37,12 @@ export function ProductPage() {
     );
   }
 
-  const related = products
-    .filter((item) => item.category === product.category && item.slug !== product.slug)
+  const related = allProducts
+    .filter((p) => p.categoryKey === product.categoryKey && p.slug !== product.slug)
+    .slice(0, 3);
+
+  const fallbackRelated = allProducts
+    .filter((p) => p.slug !== product.slug)
     .slice(0, 3);
 
   return (
@@ -45,13 +61,13 @@ export function ProductPage() {
 
           {/* Product info */}
           <article className="lg:sticky lg:top-24 lg:self-start">
-            <p className="eyebrow">{product.label}</p>
+            {product.label && <p className="eyebrow">{product.label}</p>}
             <h1 className="font-display text-4xl leading-tight sm:text-5xl md:text-6xl lg:text-7xl">
               {product.name}
             </h1>
             <p className="lead mt-4 font-black sm:mt-5">{product.price}</p>
 
-            {/* CTAs — stacked on mobile, inline on sm+ */}
+            {/* CTAs */}
             <div className="mt-6 grid grid-cols-1 gap-3 sm:mt-7 sm:flex sm:flex-wrap">
               <Button asChild className="w-full sm:w-auto">
                 <a href={whatsappLink(product.name)} target="_blank" rel="noreferrer">
@@ -97,18 +113,15 @@ export function ProductPage() {
             <div>
               <p className="eyebrow">Related products</p>
               <h2 className="font-display text-3xl leading-tight sm:text-4xl md:text-5xl lg:text-6xl">
-                More from {categoryName(product.category)}
+                More from {product.categoryName}
               </h2>
             </div>
             <Button asChild variant="secondary">
-              <Link to={`/shop?category=${product.category}`}>View category</Link>
+              <Link to={`/shop?category=${product.categoryKey}`}>View category</Link>
             </Button>
           </div>
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
-            {(related.length
-              ? related
-              : products.filter((item) => item.slug !== product.slug).slice(0, 3)
-            ).map((item) => (
+            {(related.length ? related : fallbackRelated).map((item) => (
               <ProductCard key={item.slug} product={item} />
             ))}
           </div>

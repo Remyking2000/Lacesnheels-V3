@@ -14,10 +14,13 @@ import { Link } from "react-router-dom";
 import { CategoryStrip } from "../components/catalog/CategoryStrip";
 import { ProductCard } from "../components/catalog/ProductCard";
 import { Button } from "../components/ui/button";
-import { products } from "../data/catalog";
+import { useStorefrontProducts } from "../hooks/useStorefront";
 import { whatsappLink } from "../lib/whatsapp";
 
 export function HomePage() {
+  const { data: products = [] } = useStorefrontProducts();
+  const featured = products.filter((p) => p.isFeatured).slice(0, 4);
+  const displayProducts = featured.length >= 4 ? featured : products.slice(0, 4);
   return (
     <main>
       {/* ── Hero ── */}
@@ -108,7 +111,7 @@ export function HomePage() {
             }
           />
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
-            {products.slice(0, 4).map((product) => (
+            {displayProducts.map((product) => (
               <ProductCard key={product.slug} product={product} />
             ))}
           </div>

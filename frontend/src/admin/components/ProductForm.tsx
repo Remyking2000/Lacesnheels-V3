@@ -4,6 +4,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { ImagePlus, Loader2, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
+import { useCategories } from "../../hooks/useCategories";
+import { useAddProduct, useUpdateProduct } from "../../hooks/useProducts";
 import { useAdminStore } from "../store/admin-store";
 import type { AdminProduct } from "../types";
 import { generateSlug } from "../types";
@@ -30,7 +32,10 @@ interface ProductFormProps {
 }
 
 export function ProductForm({ product, onSuccess }: ProductFormProps) {
-  const { categories, addProduct, updateProduct } = useAdminStore();
+  const { data: categories = [] } = useCategories();
+  const { mutateAsync: addProductDb } = useAddProduct();
+  const { mutateAsync: updateProductDb } = useUpdateProduct();
+  const { logActivity } = useAdminStore();
   const [images, setImages] = useState<string[]>(product?.images ?? []);
   const [imageUrl, setImageUrl] = useState("");
   const [slug, setSlug] = useState(product?.slug ?? "");
@@ -101,26 +106,33 @@ export function ProductForm({ product, onSuccess }: ProductFormProps) {
     }
 
     setSaving(true);
-    setTimeout(() => {
-      if (isEditing && product) {
-        updateProduct(product.id, { ...values, slug, images });
-        toast.success("Product updated");
-      } else {
-        const newProduct: AdminProduct = {
-          id: crypto.randomUUID(),
-          ...values,
-          slug,
-          images,
-          comparePrice: values.comparePrice || undefined,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-        addProduct(newProduct);
-        toast.success("Product created");
+    setTimeout(async () => {
+      try {
+        if (isEditing && product) {
+          await updateProductDb({ id: product.id, updates: { ...values, slug, images } });
+          logActivity("Updated product", values.name);
+          toast.success("Product updated");
+        } else {
+          const newProduct: AdminProduct = {
+            id: crypto.randomUUID(),
+            ...values,
+            slug,
+            images,
+            comparePrice: values.comparePrice || undefined,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          await addProductDb(newProduct);
+          logActivity("Created product", values.name);
+          toast.success("Product created");
+        }
+        onSuccess?.();
+      } catch {
+        toast.error("Failed to save product");
+      } finally {
+        setSaving(false);
       }
-      setSaving(false);
-      onSuccess?.();
-    }, 700);
+    }, 0);
   }
 
   const Toggle = ({ name, label }: { name: keyof Pick<FormValues, "isNewArrival" | "isFeatured" | "isActive">; label: string }) => {

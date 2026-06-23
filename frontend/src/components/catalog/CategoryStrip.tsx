@@ -1,9 +1,10 @@
 import { Link } from "react-router-dom";
-import { categories } from "../../data/catalog";
+import { useStorefrontCategories } from "../../hooks/useStorefront";
 
 export function CategoryStrip() {
+  const { data: categories = [] } = useStorefrontCategories();
+
   return (
-    /* 2 columns on mobile → 3 on md → 5 on lg */
     <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-5">
       {categories.map((category) => (
         <Link
@@ -21,7 +22,6 @@ export function CategoryStrip() {
           </div>
           <div className="p-3 sm:p-4">
             <h3 className="font-display text-lg sm:text-2xl">{category.name}</h3>
-            {/* Hide intro text on small screens to keep cards compact */}
             <p className="mt-1 hidden text-sm leading-6 text-[#8c7768] sm:mt-2 sm:block sm:leading-6">
               {category.intro}
             </p>

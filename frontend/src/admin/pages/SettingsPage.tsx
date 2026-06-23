@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
+import { useSettings, useSaveSettings } from "../../hooks/useSettings";
 import { useAdminStore } from "../store/admin-store";
 
 const schema = z.object({
@@ -17,47 +18,46 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 export function SettingsPage() {
-  const { settings, updateSettings } = useAdminStore();
+  const { data: settings, isLoading } = useSettings();
+  const { mutateAsync: saveSettings } = useSaveSettings();
+  const { setSettings, logActivity } = useAdminStore();
   const [saving, setSaving] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors, isDirty },
-  } = useForm<FormValues>({
+  const { register, handleSubmit, reset, formState: { errors, isDirty } } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: settings,
   });
 
   useEffect(() => {
-    reset(settings);
+    if (settings) reset(settings);
   }, [settings, reset]);
 
-  function onSubmit(values: FormValues) {
+  async function onSubmit(values: FormValues) {
     setSaving(true);
-    setTimeout(() => {
-      updateSettings(values);
-      toast.success("Settings saved");
-      setSaving(false);
+    try {
+      await saveSettings(values);
+      setSettings(values);
+      logActivity("Updated settings", values.storeName);
+      toast.success("Settings saved to database");
       reset(values);
-    }, 600);
+    } catch { toast.error("Failed to save settings"); }
+    finally { setSaving(false); }
+  }
+
+  if (isLoading) {
+    return <div className="flex h-64 items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-gold" /></div>;
   }
 
   return (
     <div className="space-y-5">
       <div>
         <h1 className="font-display text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
-        <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
-          Manage your store information and preferences.
-        </p>
+        <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">Store settings are persisted in Neon PostgreSQL.</p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-          <h2 className="mb-5 text-sm font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-            Store Information
-          </h2>
+          <h2 className="mb-5 text-sm font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Store Information</h2>
           <div className="grid gap-5 sm:grid-cols-2">
             <div>
               <label className="label">Store Name *</label>
@@ -87,26 +87,15 @@ export function SettingsPage() {
           </div>
         </div>
 
-        {/* Auth info */}
         <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-          <h2 className="mb-3 text-sm font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-            Admin Access
-          </h2>
+          <h2 className="mb-3 text-sm font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Database</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Admin access is password-protected. Session is stored in{" "}
-            <code className="rounded bg-gray-100 px-1 py-0.5 text-xs dark:bg-gray-800">
-              sessionStorage
-            </code>{" "}
-            and expires when the browser tab is closed.
+            Connected to <span className="font-semibold text-gray-700 dark:text-gray-300">Neon PostgreSQL</span>. All product, category, order, and settings data is persisted in the cloud database.
           </p>
         </div>
 
         <div className="flex justify-end">
-          <button
-            type="submit"
-            disabled={saving || !isDirty}
-            className="flex items-center gap-2 rounded-lg bg-charcoal px-6 py-2.5 text-sm font-bold text-ivory transition hover:bg-espresso disabled:opacity-60 dark:bg-gold dark:text-charcoal"
-          >
+          <button type="submit" disabled={saving || !isDirty} className="flex items-center gap-2 rounded-lg bg-charcoal px-6 py-2.5 text-sm font-bold text-ivory transition hover:bg-espresso disabled:opacity-60 dark:bg-gold dark:text-charcoal">
             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
             {saving ? "Saving..." : "Save Settings"}
           </button>

@@ -2,7 +2,7 @@ import { Command } from "cmdk";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { products } from "../../data/catalog";
+import { useStorefrontProducts } from "../../hooks/useStorefront";
 
 type CommandMenuProps = {
   open: boolean;
@@ -11,6 +11,7 @@ type CommandMenuProps = {
 
 export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
   const navigate = useNavigate();
+  const { data: products = [] } = useStorefrontProducts();
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -20,14 +21,19 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
           <Command>
             <div className="flex items-center gap-3 border-b border-[#6f5545]/15 px-4">
               <Search className="h-5 w-5 text-[#8c7768]" />
-              <Command.Input className="h-14 flex-1 outline-none" placeholder="Search products..." />
+              <Command.Input
+                className="h-14 flex-1 outline-none"
+                placeholder="Search products..."
+              />
             </div>
             <Command.List className="max-h-80 overflow-y-auto p-2">
-              <Command.Empty className="p-4 text-sm text-[#8c7768]">No products found.</Command.Empty>
+              <Command.Empty className="p-4 text-sm text-[#8c7768]">
+                No products found.
+              </Command.Empty>
               {products.map((product) => (
                 <Command.Item
                   key={product.slug}
-                  value={`${product.name} ${product.category}`}
+                  value={`${product.name} ${product.categoryName}`}
                   className="cursor-pointer rounded-md px-3 py-3 data-[selected=true]:bg-cream"
                   onSelect={() => {
                     navigate(`/shop/${product.slug}`);

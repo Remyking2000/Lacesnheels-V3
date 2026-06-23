@@ -1,17 +1,22 @@
 import { useSearchParams } from "react-router-dom";
-import { CategorySlug } from "../types/catalog";
-import { categories, categoryName, products } from "../data/catalog";
+import { useStorefrontProducts, useStorefrontCategories } from "../hooks/useStorefront";
 import { ProductCard } from "../components/catalog/ProductCard";
 import { Button } from "../components/ui/button";
 import { whatsappLink } from "../lib/whatsapp";
 
 export function ShopPage() {
   const [params, setParams] = useSearchParams();
-  const activeCategory = params.get("category") as CategorySlug | null;
+  const activeCategory = params.get("category");
+
+  const { data: products = [] } = useStorefrontProducts();
+  const { data: categories = [] } = useStorefrontCategories();
+
   const visibleProducts = activeCategory
-    ? products.filter((product) => product.category === activeCategory)
+    ? products.filter((p) => p.categoryKey === activeCategory)
     : products;
-  const title = activeCategory ? categoryName(activeCategory) : "Shop the collection";
+
+  const activeCategoryName = categories.find((c) => c.slug === activeCategory)?.name;
+  const title = activeCategoryName ?? "Shop the collection";
 
   return (
     <main>

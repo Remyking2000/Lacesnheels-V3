@@ -10,7 +10,7 @@
     "lint": "eslint .",
     "test": "vitest --config frontend/vitest.config.ts",
     "db:generate": "drizzle-kit generate --config backend/drizzle.config.ts",
-    "db:migrate": "drizzle-kit migrate --config backend/drizzle.config.ts",
+    "db:migrate": "tsx backend/db/migrate.ts",
     "db:seed": "tsx backend/db/seed.ts"
   },
   "dependencies": {

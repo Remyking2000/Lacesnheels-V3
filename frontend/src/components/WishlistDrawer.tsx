@@ -1,9 +1,9 @@
 import { Heart, ShoppingBag, Trash2, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { products } from "../data/catalog";
 import { useCartStore } from "../store/cart-store";
 import { useWishlistStore } from "../store/wishlist-store";
+import { useStorefrontProducts } from "../hooks/useStorefront";
 import { Button } from "./ui/button";
 
 interface WishlistDrawerProps {
@@ -14,10 +14,11 @@ interface WishlistDrawerProps {
 export function WishlistDrawer({ open, onClose }: WishlistDrawerProps) {
   const { items, toggle, moveToCart } = useWishlistStore();
   const addToCart = useCartStore((state) => state.addItem);
+  const { data: allProducts = [] } = useStorefrontProducts();
 
   const wishlistProducts = items
-    .map((slug) => products.find((p) => p.slug === slug))
-    .filter(Boolean) as typeof products;
+    .map((slug) => allProducts.find((p) => p.slug === slug))
+    .filter(Boolean) as typeof allProducts;
 
   return (
     <>
@@ -35,7 +36,7 @@ export function WishlistDrawer({ open, onClose }: WishlistDrawerProps) {
         role="dialog"
         aria-modal="true"
         aria-label="Your wishlist"
-        className={`fixed right-0 top-0 z-50 flex h-full w-full max-w-sm flex-col bg-ivory shadow-[−24px_0_60px_rgba(48,42,37,0.18)] transition-transform duration-300 sm:max-w-sm ${
+        className={`fixed right-0 top-0 z-50 flex h-full w-full max-w-sm flex-col bg-ivory shadow-[-24px_0_60px_rgba(48,42,37,0.18)] transition-transform duration-300 ${
           open ? "translate-x-0" : "translate-x-full"
         }`}
       >
@@ -79,19 +80,19 @@ export function WishlistDrawer({ open, onClose }: WishlistDrawerProps) {
                   key={product.slug}
                   className="flex gap-4 rounded-lg border border-[#6f5545]/15 bg-white p-3 shadow-sm"
                 >
-                  <Link to={`/shop/${product.slug}`} onClick={onClose}>
+                  <Link to={`/shop/${product.slug}`} onClick={onClose} className="shrink-0">
                     <img
                       src={product.image}
                       alt={product.name}
                       className="h-20 w-20 rounded-md object-cover"
                     />
                   </Link>
-                  <div className="flex flex-1 flex-col justify-between">
+                  <div className="flex flex-1 flex-col justify-between min-w-0">
                     <div>
                       <Link
                         to={`/shop/${product.slug}`}
                         onClick={onClose}
-                        className="font-display text-base leading-tight hover:text-gold transition-colors"
+                        className="font-display text-base leading-tight hover:text-gold transition-colors line-clamp-2"
                       >
                         {product.name}
                       </Link>
@@ -99,7 +100,6 @@ export function WishlistDrawer({ open, onClose }: WishlistDrawerProps) {
                       <p className="mt-1 text-sm font-black text-charcoal">{product.price}</p>
                     </div>
                     <div className="flex items-center gap-2 mt-2">
-                      {/* Move to cart */}
                       <button
                         onClick={() => {
                           moveToCart(product.slug, addToCart);
@@ -110,7 +110,6 @@ export function WishlistDrawer({ open, onClose }: WishlistDrawerProps) {
                         <ShoppingBag className="h-3.5 w-3.5" />
                         Move to Cart
                       </button>
-                      {/* Remove from wishlist */}
                       <button
                         onClick={() => {
                           toggle(product.slug);

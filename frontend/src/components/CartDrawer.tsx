@@ -1,9 +1,10 @@
 import { MessageCircle, ShoppingBag, Trash2, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { products } from "../data/catalog";
 import { cartCheckoutLink } from "../lib/whatsapp";
 import { useCartStore } from "../store/cart-store";
+import { useCreateOrder } from "../hooks/useOrders";
+import { useStorefrontProducts } from "../hooks/useStorefront";
 import { Button } from "./ui/button";
 
 interface CartDrawerProps {
@@ -11,24 +12,37 @@ interface CartDrawerProps {
   onClose: () => void;
 }
 
-/** Parse "From KES 12,500" → 12500 */
-function parsePriceKES(price: string): number {
-  const match = price.replace(/,/g, "").match(/[\d.]+/);
-  return match ? parseFloat(match[0]) : 0;
-}
-
 export function CartDrawer({ open, onClose }: CartDrawerProps) {
   const { items, removeItem, clear } = useCartStore();
+  const { mutateAsync: createOrder } = useCreateOrder();
+  const { data: allProducts = [] } = useStorefrontProducts();
 
+  // Resolve cart slugs → live DB products, fall back gracefully if not found
   const cartProducts = items
-    .map((slug) => products.find((p) => p.slug === slug))
-    .filter(Boolean) as typeof products;
+    .map((slug) => allProducts.find((p) => p.slug === slug))
+    .filter(Boolean) as typeof allProducts;
 
-  const total = cartProducts.reduce((sum, p) => sum + parsePriceKES(p.price), 0);
+  // Sum using the numeric price from DB
+  const total = cartProducts.reduce((sum, p) => sum + (p.priceNum ?? 0), 0);
 
   const checkoutUrl = cartCheckoutLink(
     cartProducts.map((p) => ({ name: p.name, price: p.price })),
   );
+
+  async function handleCheckout() {
+    // Best-effort order creation — doesn't block the WhatsApp redirect
+    try {
+      await createOrder({
+        items: cartProducts.map((p) => ({ name: p.name, price: p.price })),
+        total,
+        notes: "Order placed via WhatsApp checkout",
+      });
+    } catch {
+      // Non-blocking — customer still gets redirected to WhatsApp
+    }
+    clear();
+    onClose();
+  }
 
   return (
     <>
@@ -46,7 +60,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
         role="dialog"
         aria-modal="true"
         aria-label="Your cart"
-        className={`fixed right-0 top-0 z-50 flex h-full w-full max-w-sm flex-col bg-ivory shadow-[-24px_0_60px_rgba(48,42,37,0.18)] transition-transform duration-300 sm:max-w-sm ${
+        className={`fixed right-0 top-0 z-50 flex h-full w-full max-w-sm flex-col bg-ivory shadow-[-24px_0_60px_rgba(48,42,37,0.18)] transition-transform duration-300 ${
           open ? "translate-x-0" : "translate-x-full"
         }`}
       >
@@ -88,7 +102,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                   key={product.slug}
                   className="flex gap-4 rounded-lg border border-[#6f5545]/15 bg-white p-3 shadow-sm"
                 >
-                  <Link to={`/shop/${product.slug}`} onClick={onClose}>
+                  <Link to={`/shop/${product.slug}`} onClick={onClose} className="shrink-0">
                     <img
                       src={product.image}
                       alt={product.name}
@@ -129,7 +143,6 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
         {/* Footer */}
         {cartProducts.length > 0 && (
           <div className="border-t border-[#6f5545]/20 px-5 py-4 grid gap-3">
-
             {/* Order total */}
             <div className="flex items-center justify-between rounded-lg bg-cream px-4 py-3">
               <div>
@@ -149,13 +162,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
               Tap Checkout to send your order via WhatsApp. We'll confirm availability and delivery.
             </p>
 
-            <Button
-              asChild
-              onClick={() => {
-                clear();
-                onClose();
-              }}
-            >
+            <Button asChild onClick={handleCheckout}>
               <a href={checkoutUrl} target="_blank" rel="noreferrer">
                 <MessageCircle className="h-4 w-4" />
                 Checkout via WhatsApp

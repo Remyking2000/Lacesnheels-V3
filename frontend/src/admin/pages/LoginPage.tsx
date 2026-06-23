@@ -33,8 +33,7 @@ export function LoginPage() {
 
   function onSubmit({ password }: FormValues) {
     setLoading(true);
-    setTimeout(() => {
-      const ok = login(password);
+    login(password).then((ok) => {
       if (ok) {
         toast.success("Login successful. Welcome back!");
         navigate("/admin");
@@ -43,7 +42,7 @@ export function LoginPage() {
         toast.error("Incorrect password");
       }
       setLoading(false);
-    }, 600); // brief simulated delay
+    });
   }
 
   return (

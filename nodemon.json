@@ -1,0 +1,9 @@
+{
+  "watch": ["backend"],
+  "ext": "ts,js,json",
+  "ignore": ["backend/db/migrations/*", "node_modules/*", "dist/*"],
+  "exec": "tsx backend/server.ts",
+  "env": {
+    "NODE_ENV": "development"
+  }
+}

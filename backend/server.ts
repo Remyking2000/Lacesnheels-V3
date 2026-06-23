@@ -19,11 +19,27 @@ const PORT = parseInt(process.env.PORT ?? "4000", 10);
 
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",   // Vite dev server
-      "http://localhost:4173",   // Vite preview
-      process.env.FRONTEND_URL ?? "",
-    ].filter(Boolean),
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps, curl, or postman)
+      if (!origin) return callback(null, true);
+
+      const allowedOrigins = [
+        "http://localhost:5173",
+        "http://localhost:4173",
+        process.env.FRONTEND_URL,
+      ].filter(Boolean) as string[];
+
+      // Clean trailing slashes for comparison
+      const cleanOrigin = origin.replace(/\/$/, "");
+      const isAllowed = allowedOrigins.some(allowed => allowed.replace(/\/$/, "") === cleanOrigin) || 
+                        origin.endsWith(".vercel.app");
+
+      if (isAllowed) {
+        callback(null, true);
+      } else {
+        callback(new Error(`Origin ${origin} not allowed by CORS`));
+      }
+    },
     credentials: true,
   }),
 );

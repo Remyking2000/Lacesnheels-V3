@@ -147,6 +147,15 @@ export const ProductModel = {
       isActive = true,
     } = input;
 
+    // Fetch the category to get the actual slug for the foreign key reference
+    const categoryRows = await sql`
+      SELECT slug FROM categories WHERE id = ${categoryId} LIMIT 1
+    `;
+    const categorySlug = categoryRows[0]?.slug;
+    if (!categorySlug) {
+      throw new Error(`Category with ID ${categoryId} not found`);
+    }
+
     const imageJson = JSON.stringify(images);
     const firstImage = images[0] ?? "";
     const priceLabel = `From KES ${price.toLocaleString()}`;
@@ -163,7 +172,7 @@ export const ProductModel = {
         featured, sort_order
       ) VALUES (
         ${id}, ${slug}, ${name}, ${description},
-        ${categoryId}, ${categoryId},
+        ${categoryId}, ${categorySlug},
         ${priceLabel}, ${""}, ${firstImage},
         ${""}, ${""}, ${"New"}, ${""},
         ${price}, ${comparePrice ?? null}, ${imageJson},
@@ -178,13 +187,24 @@ export const ProductModel = {
   },
 
   async update(id: string, input: UpdateProductInput): Promise<Product | null> {
+    let categorySlug: string | null = null;
+    if (input.categoryId) {
+      const categoryRows = await sql`
+        SELECT slug FROM categories WHERE id = ${input.categoryId} LIMIT 1
+      `;
+      categorySlug = categoryRows[0]?.slug ?? null;
+      if (!categorySlug) {
+        throw new Error(`Category with ID ${input.categoryId} not found`);
+      }
+    }
+
     const rows = await sql`
       UPDATE products SET
         name           = COALESCE(${input.name ?? null},          name),
         slug           = COALESCE(${input.slug ?? null},          slug),
         description    = COALESCE(${input.description ?? null},   description),
         category_id    = COALESCE(${input.categoryId ?? null},    category_id),
-        category_slug  = COALESCE(${input.categoryId ?? null},    category_slug),
+        category_slug  = COALESCE(${categorySlug},                category_slug),
         price          = COALESCE(${input.price ?? null},         price),
         compare_price  = COALESCE(${input.comparePrice ?? null},  compare_price),
         images         = COALESCE(${input.images ? JSON.stringify(input.images) : null}, images),

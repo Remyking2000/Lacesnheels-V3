@@ -31,13 +31,22 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
+  } else {
+    console.warn(`[API Request] No token found in sessionStorage for path: ${path}`);
   }
 
   const res = await fetch(`${BASE}${path}`, { ...options, headers });
+  
+  if (!res.ok) {
+    console.error(`[API Request] HTTP error status: ${res.status} ${res.statusText} on path: ${path}`);
+  }
+
   const json = (await res.json()) as ApiResponse<T>;
 
   if (!json.success) {
-    throw new Error((json as { success: false; message: string }).message ?? "API error");
+    const errorMsg = (json as { success: false; message: string }).message ?? "API error";
+    console.error(`[API Request] API Error message: ${errorMsg} on path: ${path}`);
+    throw new Error(errorMsg);
   }
 
   return (json as { success: true; data: T }).data;

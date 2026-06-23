@@ -1,21 +1,39 @@
 /**
- * Thin fetch wrapper that calls the Express backend API.
- * Base URL comes from VITE_API_URL (default: http://localhost:4000).
+ * Typed fetch wrapper for the Express backend API.
+ * Automatically attaches the admin auth token (stored in sessionStorage)
+ * to every request as an Authorization: Bearer header.
  */
 
 const BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:4000";
+const TOKEN_KEY = "laces-heels-admin-token";
 
 type ApiResponse<T> = { success: true; data: T } | { success: false; message: string };
 
-async function request<T>(
-  path: string,
-  options: RequestInit = {},
-): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    headers: { "Content-Type": "application/json", ...options.headers },
-    ...options,
-  });
+function getToken(): string | null {
+  return sessionStorage.getItem(TOKEN_KEY);
+}
 
+export function setToken(token: string) {
+  sessionStorage.setItem(TOKEN_KEY, token);
+}
+
+export function clearToken() {
+  sessionStorage.removeItem(TOKEN_KEY);
+}
+
+async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const token = getToken();
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(options.headers as Record<string, string>),
+  };
+
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const res = await fetch(`${BASE}${path}`, { ...options, headers });
   const json = (await res.json()) as ApiResponse<T>;
 
   if (!json.success) {
@@ -26,9 +44,9 @@ async function request<T>(
 }
 
 export const api = {
-  get:    <T>(path: string, headers?: HeadersInit)              => request<T>(path, { method: "GET", headers }),
-  post:   <T>(path: string, body: unknown, headers?: HeadersInit) => request<T>(path, { method: "POST",   body: JSON.stringify(body), headers }),
-  put:    <T>(path: string, body: unknown, headers?: HeadersInit) => request<T>(path, { method: "PUT",    body: JSON.stringify(body), headers }),
-  patch:  <T>(path: string, body: unknown, headers?: HeadersInit) => request<T>(path, { method: "PATCH",  body: JSON.stringify(body), headers }),
-  delete: <T>(path: string, headers?: HeadersInit)              => request<T>(path, { method: "DELETE", headers }),
+  get:    <T>(path: string)                => request<T>(path, { method: "GET" }),
+  post:   <T>(path: string, body: unknown) => request<T>(path, { method: "POST",   body: JSON.stringify(body) }),
+  put:    <T>(path: string, body: unknown) => request<T>(path, { method: "PUT",    body: JSON.stringify(body) }),
+  patch:  <T>(path: string, body: unknown) => request<T>(path, { method: "PATCH",  body: JSON.stringify(body) }),
+  delete: <T>(path: string)               => request<T>(path, { method: "DELETE" }),
 };

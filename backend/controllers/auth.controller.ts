@@ -17,7 +17,7 @@ export const AuthController = {
 
       // Simple session token — replace with JWT in production
       const token = Buffer.from(`admin:${Date.now()}`).toString("base64");
-      res.json({ success: true, token, message: "Login successful" });
+      res.json({ success: true, data: { token, message: "Login successful" } });
     } catch (err) {
       res.status(500).json({ success: false, message: (err as Error).message });
     }

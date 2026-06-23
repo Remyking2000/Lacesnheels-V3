@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { api } from "../../lib/api";
+import { api, setToken, clearToken } from "../../lib/api";
 
 const SESSION_KEY = "laces-heels-admin-auth";
 
@@ -19,8 +19,14 @@ export const useAuthStore = create<AuthState>((set) => ({
   login: async (password: string) => {
     set({ isLoading: true, error: null });
     try {
-      await api.post("/api/auth/login", { password });
+      // API returns { token, message }
+      const result = await api.post<{ token: string; message: string }>(
+        "/api/auth/login",
+        { password },
+      );
+      // Persist both the "logged in" flag and the bearer token
       sessionStorage.setItem(SESSION_KEY, "true");
+      setToken(result.token);
       set({ isAuthenticated: true, isLoading: false });
       return true;
     } catch (err) {
@@ -32,6 +38,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   logout: () => {
     sessionStorage.removeItem(SESSION_KEY);
+    clearToken();
     set({ isAuthenticated: false, error: null });
   },
 }));

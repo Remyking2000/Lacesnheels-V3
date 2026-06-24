@@ -4,7 +4,8 @@
  * to every request as an Authorization: Bearer header.
  */
 
-const BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:4000";
+const BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? 
+             (import.meta.env.DEV ? "http://localhost:4000" : "");
 const TOKEN_KEY = "laces-heels-admin-token";
 
 type ApiResponse<T> = { success: true; data: T } | { success: false; message: string };

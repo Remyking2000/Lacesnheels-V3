@@ -6,10 +6,10 @@ export function whatsappLink(productName = "a product") {
   return `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
 }
 
-export function cartCheckoutLink(items: Array<{ name: string; price: string }>) {
+export function cartCheckoutLink(items: Array<{ name: string; price: string; quantity: number }>) {
   const number = import.meta.env.VITE_WHATSAPP_NUMBER || fallbackNumber;
 
-  const itemLines = items.map((item, i) => `  ${i + 1}. ${item.name} — ${item.price}`).join("\n");
+  const itemLines = items.map((item, i) => `  ${i + 1}. ${item.name} (${item.quantity}x) — ${item.price}`).join("\n");
   const message =
     `Hi Laces & Heels! 👋 I'd like to order the following items:\n\n` +
     `${itemLines}\n\n` +

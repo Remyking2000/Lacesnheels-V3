@@ -12,7 +12,7 @@ interface WishlistDrawerProps {
 }
 
 export function WishlistDrawer({ open, onClose }: WishlistDrawerProps) {
-  const { items, toggle, moveToCart } = useWishlistStore();
+  const { items, toggle } = useWishlistStore();
   const addToCart = useCartStore((state) => state.addItem);
   const { data: allProducts = [] } = useStorefrontProducts();
 
@@ -102,7 +102,8 @@ export function WishlistDrawer({ open, onClose }: WishlistDrawerProps) {
                     <div className="flex items-center gap-2 mt-2">
                       <button
                         onClick={() => {
-                          moveToCart(product.slug, addToCart);
+                          addToCart(product);
+                          toggle(product.slug);
                           toast.success(`${product.name} moved to cart`);
                         }}
                         className="flex items-center gap-1.5 rounded-full border border-gold bg-white px-3 py-1.5 text-xs font-black text-gold transition-colors hover:bg-gold hover:text-white"

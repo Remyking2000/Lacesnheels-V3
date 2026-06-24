@@ -4,7 +4,6 @@ import { toast } from "sonner";
 import { cartCheckoutLink } from "../lib/whatsapp";
 import { useCartStore } from "../store/cart-store";
 import { useCreateOrder } from "../hooks/useOrders";
-import { useStorefrontProducts } from "../hooks/useStorefront";
 import { Button } from "./ui/button";
 
 interface CartDrawerProps {
@@ -13,27 +12,24 @@ interface CartDrawerProps {
 }
 
 export function CartDrawer({ open, onClose }: CartDrawerProps) {
-  const { items, removeItem, clear } = useCartStore();
+  const { items, removeItem, updateQuantity, clear } = useCartStore();
   const { mutateAsync: createOrder } = useCreateOrder();
-  const { data: allProducts = [] } = useStorefrontProducts();
 
-  // Resolve cart slugs → live DB products, fall back gracefully if not found
-  const cartProducts = items
-    .map((slug) => allProducts.find((p) => p.slug === slug))
-    .filter(Boolean) as typeof allProducts;
+  // Since items are now rich CartItem objects, they represent the products directly
+  const cartProducts = items;
 
-  // Sum using the numeric price from DB
-  const total = cartProducts.reduce((sum, p) => sum + (p.priceNum ?? 0), 0);
+  // Sum using the numeric price * quantity
+  const total = cartProducts.reduce((sum, p) => sum + (p.priceNum ?? 0) * p.quantity, 0);
 
   const checkoutUrl = cartCheckoutLink(
-    cartProducts.map((p) => ({ name: p.name, price: p.price })),
+    cartProducts.map((p) => ({ name: p.name, price: p.price, quantity: p.quantity })),
   );
 
   async function handleCheckout() {
     // Best-effort order creation — doesn't block the WhatsApp redirect
     try {
       await createOrder({
-        items: cartProducts.map((p) => ({ name: p.name, price: p.price })),
+        items: cartProducts.map((p) => ({ name: p.name, price: p.price, quantity: p.quantity })),
         total,
         notes: "Order placed via WhatsApp checkout",
       });
@@ -43,6 +39,8 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
     clear();
     onClose();
   }
+
+  const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
     <>
@@ -69,9 +67,9 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
           <div className="flex items-center gap-2">
             <ShoppingBag className="h-5 w-5 text-gold" />
             <h2 className="font-display text-xl">Your Cart</h2>
-            {items.length > 0 && (
+            {totalQuantity > 0 && (
               <span className="rounded-full bg-gold px-2 py-0.5 text-xs font-black text-white">
-                {items.length}
+                {totalQuantity}
               </span>
             )}
           </div>
@@ -118,10 +116,29 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                       >
                         {product.name}
                       </Link>
-                      <p className="mt-1 text-xs text-[#8c7768]">{product.details}</p>
+                      <p className="mt-1 text-sm font-black text-charcoal">{product.price}</p>
                     </div>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-black text-charcoal">{product.price}</span>
+                    <div className="flex items-center justify-between gap-2 mt-2">
+                      {/* Quantity Controls */}
+                      <div className="flex items-center border border-[#6f5545]/30 rounded-md overflow-hidden bg-cream">
+                        <button
+                          onClick={() => updateQuantity(product.slug, product.quantity - 1)}
+                          aria-label="Decrease quantity"
+                          className="px-2.5 py-1 text-xs font-black text-[#6f5545] hover:bg-gold/15 transition-colors"
+                        >
+                          -
+                        </button>
+                        <span className="px-2 text-xs font-black text-charcoal">{product.quantity}</span>
+                        <button
+                          onClick={() => updateQuantity(product.slug, product.quantity + 1)}
+                          aria-label="Increase quantity"
+                          className="px-2.5 py-1 text-xs font-black text-[#6f5545] hover:bg-gold/15 transition-colors"
+                        >
+                          +
+                        </button>
+                      </div>
+
+                      {/* Remove */}
                       <button
                         onClick={() => {
                           removeItem(product.slug);

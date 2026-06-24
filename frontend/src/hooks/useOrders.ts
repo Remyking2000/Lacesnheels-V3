@@ -39,7 +39,7 @@ export function useOrders() {
 export interface CreateOrderInput {
   customer?: string;
   customerPhone?: string;
-  items: Array<{ name: string; price: string }>;
+  items: Array<{ name: string; price: string; quantity?: number }>;
   total: number;
   notes?: string;
 }

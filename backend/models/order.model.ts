@@ -23,6 +23,7 @@ export interface Order {
 export interface OrderItem {
   name: string;
   price: string;
+  quantity?: number;
 }
 
 export interface CreateOrderInput {

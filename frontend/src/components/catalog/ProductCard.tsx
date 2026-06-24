@@ -9,7 +9,7 @@ import { Button } from "../ui/button";
 
 export function ProductCard({ product }: { product: StorefrontProduct }) {
   const addItem = useCartStore((state) => state.addItem);
-  const inCart = useCartStore((state) => state.items.includes(product.slug));
+  const inCart = useCartStore((state) => state.items.some((item) => item.slug === product.slug));
   const toggleWish = useWishlistStore((state) => state.toggle);
   const wished = useWishlistStore((state) => state.items.includes(product.slug));
 
@@ -55,9 +55,9 @@ export function ProductCard({ product }: { product: StorefrontProduct }) {
               size="sm"
               className="w-full"
               onClick={() => {
-                addItem(product.slug);
+                addItem(product);
                 toast.success(
-                  inCart ? `${product.name} already in cart` : `${product.name} added to cart`,
+                  inCart ? `${product.name} quantity increased in cart` : `${product.name} added to cart`,
                 );
               }}
             >

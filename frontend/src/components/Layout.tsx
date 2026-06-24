@@ -24,7 +24,7 @@ export function Layout() {
   const [cartOpen, setCartOpen] = useState(false);
   const [wishlistOpen, setWishlistOpen] = useState(false);
 
-  const cartCount = useCartStore((state) => state.items.length);
+  const cartCount = useCartStore((state) => state.items.reduce((sum, item) => sum + item.quantity, 0));
   const wishlistCount = useWishlistStore((state) => state.items.length);
 
   return (

@@ -2,11 +2,12 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 
-import authRoutes     from "./routes/auth.routes.js";
-import categoryRoutes from "./routes/category.routes.js";
-import productRoutes  from "./routes/product.routes.js";
-import orderRoutes    from "./routes/order.routes.js";
-import settingsRoutes from "./routes/settings.routes.js";
+import authRoutes       from "./routes/auth.routes.js";
+import googleAuthRoutes from "./routes/google-auth.routes.js";
+import categoryRoutes   from "./routes/category.routes.js";
+import productRoutes    from "./routes/product.routes.js";
+import orderRoutes      from "./routes/order.routes.js";
+import settingsRoutes   from "./routes/settings.routes.js";
 
 import { notFound, errorHandler } from "./middleware/error.middleware.js";
 
@@ -60,6 +61,7 @@ app.get("/health", (_req, res) => {
 // ── API routes ────────────────────────────────────────────────────────────────
 
 app.use("/api/auth",       authRoutes);
+app.use("/api/auth",       googleAuthRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/products",   productRoutes);
 app.use("/api/orders",     orderRoutes);

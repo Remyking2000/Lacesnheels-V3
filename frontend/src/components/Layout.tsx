@@ -4,6 +4,7 @@ import { Link, NavLink, Outlet } from "react-router-dom";
 import { CommandMenu } from "./catalog/CommandMenu";
 import { CartDrawer } from "./CartDrawer";
 import { WishlistDrawer } from "./WishlistDrawer";
+import { AuthButton } from "./AuthButton";
 import { Button } from "./ui/button";
 import { whatsappLink } from "../lib/whatsapp";
 import { useCartStore } from "../store/cart-store";
@@ -63,6 +64,9 @@ export function Layout() {
             >
               <Search className="h-5 w-5" />
             </Button>
+
+            {/* Sign in / profile */}
+            <AuthButton />
 
             {/* Wishlist */}
             <Button

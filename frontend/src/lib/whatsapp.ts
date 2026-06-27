@@ -1,4 +1,4 @@
-const fallbackNumber = "254100663761";
+const fallbackNumber = "254700709002";
 
 export function whatsappLink(productName = "a product") {
   const number = import.meta.env.VITE_WHATSAPP_NUMBER || fallbackNumber;

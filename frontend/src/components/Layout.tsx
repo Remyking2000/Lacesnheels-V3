@@ -210,12 +210,12 @@ function Footer() {
           <h4 className="font-bold text-ivory">Contact</h4>
           <div className="mt-3 grid gap-3">
             <a
-              href="https://wa.me/254100663761"
+              href="https://wa.me/254700709002"
               target="_blank"
               rel="noreferrer"
               className="min-h-[44px] text-sm leading-[44px]"
             >
-              WhatsApp: +254 100 663761
+              WhatsApp: +254 700 709002
             </a>
             <a
               href="https://www.instagram.com/lacesbyray/"

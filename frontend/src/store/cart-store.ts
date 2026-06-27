@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { api } from "../lib/api";
 
 export interface CartItem {
   slug: string;
@@ -12,41 +13,71 @@ export interface CartItem {
 
 type CartState = {
   items: CartItem[];
-  addItem: (product: { slug: string; name: string; price: string; priceNum: number; image: string }) => void;
+
+  /** Load items (called after sign-in to replace local state with DB data) */
+  loadItems: (items: CartItem[]) => void;
+
+  addItem: (product: Omit<CartItem, "quantity">) => void;
   removeItem: (slug: string) => void;
   updateQuantity: (slug: string, quantity: number) => void;
   clear: () => void;
 };
 
+/** Fire-and-forget DB sync — never blocks the UI */
+function syncAdd(item: CartItem) {
+  api.post("/api/user/cart", item).catch(() => {/* offline — local state is source of truth */});
+}
+function syncRemove(slug: string) {
+  api.delete(`/api/user/cart/${slug}`).catch(() => {});
+}
+function syncQuantity(slug: string, quantity: number) {
+  api.patch(`/api/user/cart/${slug}`, { quantity }).catch(() => {});
+}
+function syncClear() {
+  api.delete("/api/user/cart").catch(() => {});
+}
+
 export const useCartStore = create<CartState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       items: [],
-      addItem: (product) =>
+
+      loadItems: (items) => set({ items }),
+
+      addItem: (product) => {
         set((state) => {
-          const existing = state.items.find((item) => item.slug === product.slug);
+          const existing = state.items.find((i) => i.slug === product.slug);
           if (existing) {
-            return {
-              items: state.items.map((item) =>
-                item.slug === product.slug
-                  ? { ...item, quantity: item.quantity + 1 }
-                  : item
-              ),
-            };
+            const updated = state.items.map((i) =>
+              i.slug === product.slug ? { ...i, quantity: i.quantity + 1 } : i,
+            );
+            syncQuantity(product.slug, existing.quantity + 1);
+            return { items: updated };
           }
-          return {
-            items: [...state.items, { ...product, quantity: 1 }],
-          };
-        }),
-      removeItem: (slug) =>
-        set((state) => ({ items: state.items.filter((item) => item.slug !== slug) })),
-      updateQuantity: (slug, quantity) =>
+          const newItem: CartItem = { ...product, quantity: 1 };
+          syncAdd(newItem);
+          return { items: [...state.items, newItem] };
+        });
+      },
+
+      removeItem: (slug) => {
+        set((state) => ({ items: state.items.filter((i) => i.slug !== slug) }));
+        syncRemove(slug);
+      },
+
+      updateQuantity: (slug, quantity) => {
         set((state) => ({
-          items: state.items.map((item) =>
-            item.slug === slug ? { ...item, quantity: Math.max(1, quantity) } : item
+          items: state.items.map((i) =>
+            i.slug === slug ? { ...i, quantity: Math.max(1, quantity) } : i,
           ),
-        })),
-      clear: () => set({ items: [] }),
+        }));
+        syncQuantity(slug, Math.max(1, quantity));
+      },
+
+      clear: () => {
+        set({ items: [] });
+        syncClear();
+      },
     }),
     { name: "lnh-cart" },
   ),

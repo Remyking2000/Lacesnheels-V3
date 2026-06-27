@@ -5,54 +5,53 @@ import { toast } from "sonner";
 import { useUserStore } from "../store/user-store";
 import { api } from "../lib/api";
 import { Button } from "./ui/button";
+import type { CartItem } from "../store/cart-store";
+
+interface SignInResponse {
+  user: { id: string; email: string; name: string; avatar: string };
+  token: string;
+  cart: CartItem[];
+  wishlist: string[];
+}
 
 export function AuthButton() {
-  const { user, signOut, isLoading } = useUserStore();
+  const { user, onSignIn, signOut, isLoading } = useUserStore();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown on outside click
   useEffect(() => {
-    function onClickOutside(e: MouseEvent) {
+    function onOutside(e: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setDropdownOpen(false);
       }
     }
-    document.addEventListener("mousedown", onClickOutside);
-    return () => document.removeEventListener("mousedown", onClickOutside);
+    document.addEventListener("mousedown", onOutside);
+    return () => document.removeEventListener("mousedown", onOutside);
   }, []);
 
-  // Google OAuth popup — implicit/access-token flow
   const login = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       useUserStore.setState({ isLoading: true });
       try {
-        // 1. Fetch user info from Google
+        // 1. Fetch Google user info
         const googleUser = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
           headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
         }).then((r) => r.json()) as {
-          sub: string;
-          email: string;
-          name: string;
-          picture: string;
+          sub: string; email: string; name: string; picture: string;
         };
 
-        // 2. Send to our backend → upsert in DB
-        const profile = await api.post<{
-          id: string;
-          email: string;
-          name: string;
-          avatar: string;
-        }>("/api/auth/google/callback", {
+        // 2. Send to backend — receives user profile + JWT + saved cart + wishlist
+        const data = await api.post<SignInResponse>("/api/auth/google/callback", {
           googleId: googleUser.sub,
           email:    googleUser.email,
           name:     googleUser.name,
           avatar:   googleUser.picture,
         });
 
-        // 3. Persist in Zustand store
-        useUserStore.setState({ user: profile, isLoading: false });
-        toast.success(`Welcome, ${profile.name.split(" ")[0]}! 👋`);
+        // 3. Store user, token, and restore cart + wishlist from DB
+        onSignIn(data);
+        toast.success(`Welcome back, ${data.user.name.split(" ")[0]}! 👋`);
       } catch {
         useUserStore.setState({ isLoading: false });
         toast.error("Sign in failed. Please try again.");
@@ -67,14 +66,13 @@ export function AuthButton() {
   function handleSignOut() {
     signOut();
     setDropdownOpen(false);
-    toast.success("Signed out successfully");
+    toast.success("Signed out. Your cart and wishlist are saved for next time.");
   }
 
   // ── Signed in ─────────────────────────────────────────────────────────────
   if (user) {
     return (
       <div className="relative" ref={dropdownRef}>
-        {/* Avatar button */}
         <button
           onClick={() => setDropdownOpen((v) => !v)}
           aria-label="Account menu"
@@ -95,10 +93,9 @@ export function AuthButton() {
           )}
         </button>
 
-        {/* Dropdown */}
         {dropdownOpen && (
           <div className="absolute right-0 top-11 z-50 w-60 overflow-hidden rounded-xl border border-[#6f5545]/20 bg-white shadow-soft">
-            {/* User info row */}
+            {/* User info */}
             <div className="flex items-center gap-3 border-b border-[#6f5545]/10 px-4 py-3">
               <img
                 src={user.avatar}

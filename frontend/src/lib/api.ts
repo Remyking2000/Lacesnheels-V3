@@ -1,53 +1,53 @@
 /**
  * Typed fetch wrapper for the Express backend API.
- * Automatically attaches the admin auth token (stored in sessionStorage)
- * to every request as an Authorization: Bearer header.
+ *
+ * Token strategy:
+ *   - Admin routes: Authorization: Bearer <token>  (stored in sessionStorage)
+ *   - Customer routes: X-User-Token: <jwt>          (stored in localStorage)
  */
 
-const BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? 
-             (import.meta.env.DEV ? "http://localhost:4000" : "");
-const TOKEN_KEY = "laces-heels-admin-token";
+const BASE =
+  (import.meta.env.VITE_API_URL as string | undefined) ??
+  (import.meta.env.DEV ? "http://localhost:4000" : "");
+
+const ADMIN_TOKEN_KEY = "laces-heels-admin-token";
+const USER_TOKEN_KEY  = "lnh-user-token";
 
 type ApiResponse<T> = { success: true; data: T } | { success: false; message: string };
 
-function getToken(): string | null {
-  return sessionStorage.getItem(TOKEN_KEY);
-}
+// ── Token helpers ─────────────────────────────────────────────────────────────
 
-export function setToken(token: string) {
-  sessionStorage.setItem(TOKEN_KEY, token);
-}
+export function getAdminToken() { return sessionStorage.getItem(ADMIN_TOKEN_KEY); }
+export function setAdminToken(t: string) { sessionStorage.setItem(ADMIN_TOKEN_KEY, t); }
+export function clearAdminToken() { sessionStorage.removeItem(ADMIN_TOKEN_KEY); }
 
-export function clearToken() {
-  sessionStorage.removeItem(TOKEN_KEY);
-}
+// Alias for backward compat
+export const setToken   = setAdminToken;
+export const clearToken = clearAdminToken;
+
+export function getUserToken() { return localStorage.getItem(USER_TOKEN_KEY); }
+export function setUserToken(t: string) { localStorage.setItem(USER_TOKEN_KEY, t); }
+export function clearUserToken() { localStorage.removeItem(USER_TOKEN_KEY); }
+
+// ── Request ───────────────────────────────────────────────────────────────────
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = getToken();
+  const adminToken = getAdminToken();
+  const userToken  = getUserToken();
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(options.headers as Record<string, string>),
   };
 
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  } else {
-    console.warn(`[API Request] No token found in sessionStorage for path: ${path}`);
-  }
+  if (adminToken) headers["Authorization"] = `Bearer ${adminToken}`;
+  if (userToken)  headers["X-User-Token"]  = userToken;
 
   const res = await fetch(`${BASE}${path}`, { ...options, headers });
-  
-  if (!res.ok) {
-    console.error(`[API Request] HTTP error status: ${res.status} ${res.statusText} on path: ${path}`);
-  }
-
   const json = (await res.json()) as ApiResponse<T>;
 
   if (!json.success) {
-    const errorMsg = (json as { success: false; message: string }).message ?? "API error";
-    console.error(`[API Request] API Error message: ${errorMsg} on path: ${path}`);
-    throw new Error(errorMsg);
+    throw new Error((json as { success: false; message: string }).message ?? "API error");
   }
 
   return (json as { success: true; data: T }).data;

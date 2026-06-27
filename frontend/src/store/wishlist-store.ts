@@ -1,25 +1,34 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { api } from "../lib/api";
 
 type WishlistState = {
   items: string[];
+
+  /** Load items (called after sign-in to replace local state with DB data) */
+  loadItems: (slugs: string[]) => void;
+
   toggle: (slug: string) => void;
-  moveToCart: (slug: string, addToCart: (slug: string) => void) => void;
 };
+
+function syncToggle(slug: string) {
+  api.post("/api/user/wishlist/toggle", { slug }).catch(() => {});
+}
 
 export const useWishlistStore = create<WishlistState>()(
   persist(
     (set) => ({
       items: [],
-      toggle: (slug) =>
+
+      loadItems: (slugs) => set({ items: slugs }),
+
+      toggle: (slug) => {
         set((state) => ({
           items: state.items.includes(slug)
-            ? state.items.filter((item) => item !== slug)
+            ? state.items.filter((s) => s !== slug)
             : [...state.items, slug],
-        })),
-      moveToCart: (slug, addToCart) => {
-        addToCart(slug);
-        set((state) => ({ items: state.items.filter((item) => item !== slug) }));
+        }));
+        syncToggle(slug);
       },
     }),
     { name: "lnh-wishlist" },

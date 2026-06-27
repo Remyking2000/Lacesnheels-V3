@@ -8,6 +8,7 @@ import categoryRoutes   from "./routes/category.routes.js";
 import productRoutes    from "./routes/product.routes.js";
 import orderRoutes      from "./routes/order.routes.js";
 import settingsRoutes   from "./routes/settings.routes.js";
+import userDataRoutes   from "./routes/user-data.routes.js";
 
 import { notFound, errorHandler } from "./middleware/error.middleware.js";
 
@@ -66,6 +67,7 @@ app.use("/api/categories", categoryRoutes);
 app.use("/api/products",   productRoutes);
 app.use("/api/orders",     orderRoutes);
 app.use("/api/settings",   settingsRoutes);
+app.use("/api/user",       userDataRoutes);
 
 // ── Error handling ────────────────────────────────────────────────────────────
 

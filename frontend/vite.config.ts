@@ -8,12 +8,29 @@ const projectRoot = fileURLToPath(new URL("..", import.meta.url));
 
 export default defineConfig({
   root: frontendRoot,
-  // Tell Vite to load .env from the project root (where the file actually lives)
   envDir: projectRoot,
   cacheDir: "../node_modules/.vite",
   plugins: [react()],
   build: {
     outDir: "../dist",
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "react-vendor":  ["react", "react-dom", "react-router-dom"],
+          "ui-vendor":     ["framer-motion", "lucide-react", "sonner"],
+          "query-vendor":  ["@tanstack/react-query"],
+          "charts-vendor": ["recharts"],
+          "radix-vendor":  [
+            "@radix-ui/react-dialog",
+            "@radix-ui/react-select",
+            "@radix-ui/react-tabs",
+            "@radix-ui/react-checkbox",
+          ],
+          "google-vendor": ["@react-oauth/google"],
+          "form-vendor":   ["react-hook-form", "@hookform/resolvers", "zod"],
+        },
+      },
+    },
   },
 });

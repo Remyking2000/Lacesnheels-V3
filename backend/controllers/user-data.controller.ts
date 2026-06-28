@@ -50,7 +50,7 @@ export const UserDataController = {
   async updateCartQuantity(req: Request, res: Response) {
     try {
       const userId   = req.currentUser!.userId;
-      const { slug } = req.params;
+      const slug     = req.params.slug as string;
       const quantity = parseInt(req.body.quantity);
       if (isNaN(quantity)) return res.status(400).json({ success: false, message: "quantity required" });
 
@@ -65,7 +65,7 @@ export const UserDataController = {
   async removeFromCart(req: Request, res: Response) {
     try {
       const userId = req.currentUser!.userId;
-      await UserCartModel.remove(userId, req.params.slug);
+      await UserCartModel.remove(userId, req.params.slug as string);
       res.json({ success: true, data: null });
     } catch (err) {
       res.status(500).json({ success: false, message: (err as Error).message });
@@ -145,7 +145,7 @@ export const UserDataController = {
   // DELETE /api/user/wishlist/:slug
   async removeFromWishlist(req: Request, res: Response) {
     try {
-      await UserWishlistModel.remove(req.currentUser!.userId, req.params.slug);
+      await UserWishlistModel.remove(req.currentUser!.userId, req.params.slug as string);
       res.json({ success: true, data: null });
     } catch (err) {
       res.status(500).json({ success: false, message: (err as Error).message });

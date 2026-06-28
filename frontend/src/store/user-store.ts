@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { setUserToken, clearUserToken } from "../lib/api";
+import { useCartStore } from "./cart-store";
+import { useWishlistStore } from "./wishlist-store";
 import type { CartItem } from "./cart-store";
 
 export interface UserProfile {
@@ -13,7 +15,6 @@ export interface UserProfile {
 interface UserState {
   user: UserProfile | null;
   isLoading: boolean;
-  /** Called after a successful Google sign-in with the full server response */
   onSignIn: (data: {
     user: UserProfile;
     token: string;
@@ -30,33 +31,19 @@ export const useUserStore = create<UserState>()(
       isLoading: false,
 
       onSignIn: ({ user, token, cart, wishlist }) => {
-        // 1. Persist the JWT so api.ts attaches it on every request
+        // Store JWT so api.ts attaches it on every future request
         setUserToken(token);
-
-        // 2. Load cart + wishlist from DB into local stores
-        // Import lazily to avoid circular deps
-        import("./cart-store").then(({ useCartStore }) => {
-          useCartStore.getState().loadItems(cart);
-        });
-        import("./wishlist-store").then(({ useWishlistStore }) => {
-          useWishlistStore.getState().loadItems(wishlist);
-        });
-
+        // Restore cart and wishlist from DB
+        useCartStore.getState().loadItems(cart);
+        useWishlistStore.getState().loadItems(wishlist);
         set({ user, isLoading: false });
       },
 
       signOut: () => {
-        // Remove JWT — future requests won't carry it
         clearUserToken();
-
-        // Clear only local state — DB records stay intact
-        import("./cart-store").then(({ useCartStore }) => {
-          useCartStore.setState({ items: [] });
-        });
-        import("./wishlist-store").then(({ useWishlistStore }) => {
-          useWishlistStore.setState({ items: [] });
-        });
-
+        // Clear local state only — DB records stay intact
+        useCartStore.setState({ items: [] });
+        useWishlistStore.setState({ items: [] });
         set({ user: null });
       },
     }),
